@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Hand Controlled Real Solar System HD</title>
+<style>
+  body { margin:0; overflow:hidden; background:black; }
+  #video {
+    position:fixed; bottom:10px; right:10px;
+    width:200px; opacity:0.6;
+    border:2px solid white; border-radius:10px;
+  }
+  body {
+    margin:0;
+    overflow:hidden;
+    background:#000;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  #ui {
+    position:fixed;
+    top:0;
+    width:100%;
+    text-align:center;
+    padding:20px 0;
+    background:rgba(0,0,0,0.4);
+    backdrop-filter:blur(8px);
+    z-index:10;
+    border-bottom:1px solid rgba(0,150,255,0.2);
+  }
+
+  #ui h1 {
+    margin:0;
+    font-size:32px;
+    color:white;
+    font-weight:600;
+    text-shadow:0 0 15px rgba(0,140,255,0.8);
+  }
+
+  .stats {
+    display:flex;
+    gap:22px;
+    justify-content:center;
+    margin-top:10px;
+  }
+
+  .stats p {
+    font-size:16px;
+    color:white;
+    opacity:0.8;
+  }
+
+  .stats span {
+    color:#34a5ff;
+    font-weight:600;
+  }
+
+  #reset {
+    margin-top:10px;
+    background:linear-gradient(135deg, #007BFF, #00C8FF);
+    border:none;
+    padding:10px 25px;
+    color:white;
+    border-radius:30px;
+    font-size:16px;
+    font-weight:600;
+    box-shadow:0 0 10px #00aaff;
+    cursor:pointer;
+    transition:0.3s;
+  }
+
+  #reset:hover {
+    transform:scale(1.08);
+    box-shadow:0 0 18px #00d5ff;
+  }
+
+  #video {
+    position:fixed; bottom:10px; right:10px;
+    width:200px; opacity:0.6;
+    border:2px solid #00A3FF; 
+    border-radius:10px;
+    box-shadow:0 0 15px #008cff;
+  }
+</style>
+
+
+<!-- Three.js -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+<!-- Mediapipe -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+</head>
+<body>
+<!-- 🌌 UI OVERLAY -->
+<div id="ui">
+  <h1>Hand Controlled Solar System 🚀</h1>
+
+  <div class="stats">
+    <p><span>Made By</span> Nishu</p>
+    <p><span>🤏 Pinch:</span> Zoom In/Out</p>
+    <p><span>↔ Move Hand:</span> Rotate Camera</p>
+    <p><span>↕ Move Hand:</span> Tilt Up/Down</p>
+    <p><span>🌀 Twist:</span> Spin Planets</p>
+  </div>
+
+  <button id="reset">Reset View</button>
+</div>
+
+<video id="video" autoplay muted playsinline></video>
+<h1 style="color: white;">Made by - Nishu Sharma</h1>
+
+<script>
+// 🎥 THREE.JS SCENE
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 2000);
+camera.position.set(0,12,55);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// 🌌 Space Background
+const loader = new THREE.TextureLoader().setCrossOrigin("anonymous");
+scene.background = loader.load("https://cdn.pixabay.com/photo/2016/02/20/10/37/space-1206676_1280.jpg");
+
+// ☀️ LIGHT SYSTEM (Main Fix)
+const sunLight = new THREE.PointLight(0xffffff, 4, 2000);
+sunLight.position.set(0,0,0);
+scene.add(sunLight);
+
+// Ambient fill so planets don't appear black
+const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambient);
+
+// 🪐 PLANET MAKER FUNCTION
+function createPlanet(radius, textureURL, distance, speed){
+  const material = new THREE.MeshStandardMaterial({
+    map: loader.load(textureURL)
+  });
+  const sphere = new THREE.Mesh(
+    new THREE.SphereGeometry(radius, 64, 64), material
+  );
+
+  const orbit = new THREE.Object3D();
+  orbit.add(sphere);
+  sphere.position.x = distance;
+  return { orbit, sphere, speed };
+}
+
+// ☀️ SUN
+const sun = new THREE.Mesh(
+  new THREE.SphereGeometry(7,64,64),
+  new THREE.MeshStandardMaterial({
+    map: loader.load("https://upload.wikimedia.org/wikipedia/commons/4/4c/Sun_white.jpg"),
+    emissive: 0xff6600,
+    emissiveIntensity: 2.5
+  })
+);
+scene.add(sun);
+
+// 🪐 PLANETS (HD WORKING TEXTURES)
+const planets = [
+  createPlanet(1.2, "https://planet-texture-pack.vercel.app/mercury.jpg", 10, 0.02),
+  createPlanet(2, "https://upload.wikimedia.org/wikipedia/commons/8/85/Venus_globe.jpg", 14, 0.017),
+  createPlanet(2.3, "https://upload.wikimedia.org/wikipedia/commons/9/97/The_Earth_seen_from_Apollo_17.jpg", 18, 0.014),
+  createPlanet(1.8, "https://planet-texture-pack.vercel.app/mars.jpg", 22, 0.012),
+  createPlanet(5, "https://upload.wikimedia.org/wikipedia/commons/e/e2/Jupiter.jpg", 29, 0.009),
+  createPlanet(4.6, "https://upload.wikimedia.org/wikipedia/commons/c/c7/Saturn_during_Equinox.jpg", 35, 0.007),
+  createPlanet(4, "https://upload.wikimedia.org/wikipedia/commons/3/3d/Uranus2.jpg", 42, 0.005),
+  createPlanet(3.8, "https://upload.wikimedia.org/wikipedia/commons/5/56/Neptune_Full.jpg", 48, 0.004)
+];
+planets.forEach(p => scene.add(p.orbit));
+
+// 💍 SATURN RINGS
+const ring = new THREE.Mesh(
+  new THREE.RingGeometry(5.5,9,128),
+  new THREE.MeshBasicMaterial({
+    map: loader.load("https://planet-texture-pack.vercel.app/saturn_ring.png"),
+    transparent:true,
+    side:THREE.DoubleSide
+  })
+);
+ring.rotation.x = Math.PI / 2;
+ring.position.x = 35;
+scene.add(ring);
+
+// ✋ HAND CONTROL
+let zoom = 55;
+let rotateSpeed = 0;
+
+// 🎞️ ANIMATION LOOP
+function animate(){
+  requestAnimationFrame(animate);
+
+  sun.rotation.y += 0.002;
+  planets.forEach(p=>{
+    p.orbit.rotation.y += p.speed;
+    p.sphere.rotation.y += 0.01;
+  });
+
+  camera.position.x = Math.sin(rotateSpeed) * zoom;
+  camera.position.z = Math.cos(rotateSpeed) * zoom;
+  camera.lookAt(0,0,0);
+
+  renderer.render(scene,camera);
+}
+animate();
+
+// 🖐️ MEDIAPIPE HANDS
+const video=document.getElementById("video");
+const hands=new Hands({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+
+hands.setOptions({
+ maxNumHands:1, modelComplexity:1,
+ minDetectionConfidence:0.7, minTrackingConfidence:0.6
+});
+
+hands.onResults(res=>{
+ if(!res.multiHandLandmarks.length) return;
+ const hand=res.multiHandLandmarks[0];
+ const thumb=hand[4], index=hand[8];
+ const distance=Math.hypot(index.x-thumb.x,index.y-thumb.y);
+
+ // Gesture Controls
+ if(distance>0.20) zoom -= 0.6;
+ if(distance<0.08) zoom += 0.6;
+ zoom = Math.max(20, Math.min(100, zoom));
+
+ rotateSpeed += (index.x - 0.5)*0.04;
+});
+
+new Camera(video,{onFrame:async()=>await hands.send({image:video}),width:640,height:480}).start();
+document.getElementById("reset").onclick = ()=>{
+  zoom = 55;
+  tilt = 0;
+  rotateSpeed = 0;
+};
+
+</script>
+</body>
+</html>
